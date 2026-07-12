@@ -1,0 +1,20 @@
+# this should be a json, may do later
+
+universal_minecraft:chest 5
+universal_minecraft:cauldron 5
+universal_minecraft:daylight_detector 4
+universal_minecraft:blackstone 4
+universal_minecraft:head 4
+universal_minecraft:lily_pad 4
+universal_minecraft:powder_snow 4
+universal_minecraft:gravel 3
+universal_minecraft:item_frame_block 3
+universal_minecraft:blue_ice 3
+universal_minecraft:packed_ice 3
+universal_minecraft:carpet 2
+universal_minecraft:sign 2
+universal_minecraft:candle 1
+universal_minecraft:bone_block 1
+universal_minecraft:ladder 1
+universal_minecraft:scaffolding 1
+universal_minecraft:pink_petals 1

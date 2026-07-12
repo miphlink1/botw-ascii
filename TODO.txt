@@ -1,0 +1,40 @@
+
+X - complete
+: - in progress
+! - failed
+
+small convenient tasks:
+[ ] find a place to put block_counts_old.json (untruncated)
+[ ] turn dropped_blocks.txt into a .json file
+[ ] get rid of outdated, inefficient and unusable scripts in like a archive folder
+[ ] perhaps create a archived folder?
+
+[X] PHASE 1. datamining pipeline
+    Getting the raw data of the Minecraft world. Past this step
+    the project should be independent from Amulet and only rely
+    on the map data already extracted.
+    [X] python raw_scan.py
+    [X] python trim_block_counts.py
+    [X] python build_symbol_map.py
+    [!] python detect_air_raw.py
+    [!] python detect_air_optimised.py
+    [X] python detect_air_columns.py
+    [!] python build_underhangs.py
+    [X] python build_underhangs.py (improved)
+    [X] python build_symbol_map.py
+    [X] python rebuild_underhangs_ascii.py
+    [X] python convert_surface_to_ascii.py
+    [X] python detect_openings.py
+
+[:] PHASE 2. data polishing
+    Changing and converting the data to use a consistent format,
+    filtering out underhangs, precomputing compute-heavy steps,
+    grouping openings, creating a second translation key
+    [X] python normalize_surface_altitude.py
+    [X] python normalize_underhang_altmaps.py
+    [X] python group_openings_into_entrances.py
+    [X] python assign_underhangs_ids.py
+    [X] python split_underhangs.py
+    [X] python interactive_symbol_remap.py
+    [X] python resolve_translation_key.py
+    [:] python render.py
