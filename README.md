@@ -37,11 +37,17 @@ Note: All world design, map layout, characters, names and specific creative cont
 
 ## Pipeline status
 [X] **Phase 1 — datamining**: raw extraction from Minecraft world (raw_scan, symbol map, air detection, underhangs, openings). Complete. Should no longer need the Minecraft world reloaded for normal work.
+
 [:] **Phase 2 — data polishing**: normalization, translation key, symbol remap, opening→entrance grouping. Mostly done — only trees still in progress.
+
 [ ] **Phase 3 — rendering**: rendering the world. includes map data, underhangs, custom overlays, and entities. yay i finally get to touch an if statement
+
 [ ] **Phase 4 — the player**: Player class, HP, stamina, climbing. inventory and attack animation and hitbox. abilities, bow+shield.
+
 [ ] **Phase 5 — other entities**: Enemy behavior, NPCs, wild animals, fish.
+
 [ ] **Phase 6 — shrines and interiors**: redoing Phase 1 for scraping base data from shrines and then hand-authoring details, fixing interior of Shrine of Resurrection, Old Man's Cabin and Temple of Time.
+
 [ ] **Phase 7 — gameplay and content**: preloading cutscenes and adding dialogue, progression and unlocks. UI/HUD, settings, main menu, world+save states.
 
 ## Contributing
