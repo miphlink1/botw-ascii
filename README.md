@@ -1,82 +1,55 @@
 # The Legend of Zelda: Breath of the Wild in ASCII
 
-An attempt to recreate BotW's Great Plateau as a 2.5D, top-down ASCII renderer in Python — inspired by the presentation of classic Pokémon games.
+An attempt to recreate BotW's Great Plateau as a 2.5D, top-down ASCII renderer in Python
 
 ## Status
-
-🚧 **Work in progress.** MVP scope: the Great Plateau only.
-
-## Why a 2.5D Great Plateau (and not full 3D)?
-
-A perfect, full 3D ASCII representation of the entire game is likely infeasible due to memory and performance constraints (and raycasting is out of scope for now). The MVP is scoped down to a 2.5D top-down view of just the Great Plateau to keep things achievable.
-
-## Data Source
-
-Instead of hand-authoring the map data, this project extracts it from Grazzy's [*I Built All Of Breath Of The Wild in Minecraft*](https://grazzy.sae.sh/) world, using the [Amulet](https://www.amuletmc.com/) library to read the world data directly.
-
-## Data Pipeline
-
-### 1. Surface data
-
-The first layer extracted is the surface: the highest non-air block for each `[x, z]` column within the bounds of the Great Plateau. 
-
-**Note** Surface data has been streamlined to match underhangs.json, so there is a surface_art.txt and surface_raw.json.
-
-### 2. Underhangs (caves, overhangs, interiors)
-
-Surface data alone only produces a flattened plateau — anything under a roof effectively doesn't exist. That means the Temple of Time would render as a plain rock formation, and the Shrine of Resurrection wouldn't appear at all.
-
-Underhangs solve this, but they're structural rather than per-block: they're rendered together as a group, or not at all. Extracted as:
-
-- **`underhangs.json`** — the most complex data file. Each underhang is treated as its own separate map (though rendered together with others). Underhangs are pre-grouped into **caves**: clusters of subterranean air blocks that touch each other and get rendered as a single unit. Each underhang stores:
-  - **artmap** — the block IDs of every block below the lowest block in an air column (in an `[x, z]` position) that doesn't touch the ground
-  - **altmap** — the altitude (y level) of each of the artmap's tiles, indexed identically
-  - **readmap** — the artmap gone through a translation layer of `key.json` to make the characters more readable. 
-  - **custommap** — additional miniscule changes custommised by me. Overlayed over readmap.
-
-
-### 3. Rendering underhangs
-
-A naive rule like:
-
+**Work in Progress (WIP) Phase 2**
 ```
-if abs(player_y - underhang_average_y) <= 35:
-    render_underhang()
+╔╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╤╗
+╟┼┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┼╢
+╟┤---db---d8b---db------d888888b------d8888b.---├╢
+╟┤---88---I8I---88--------`88'--------88--`8D---├╢
+╟┤---88---I8I---88---------88---------88oodD'---├╢
+╟┤---Y8---I8I---88---------88---------88~~~-----├╢
+╟┤---`8b-d8'8b-d8'--------.88.--------88--------├╢
+╟┤----`8b8'-`8d8'-------Y888888P------88--------├╢
+╟┼┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┼╢
+╚╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╧╝
 ```
+## Overview
+I'm finally making the project I always wanted to do in Python!!!
+I've wanted to do since I realised input() existed and so I thought, 'okay Zelda time.'
 
-...doesn't hold up. The intended approach instead:
+The Legend of Zelda, Breath of the Wild in ASCII will include:
 
-1. Calculate the position of each cave's opening(s) and their median y level.
-2. Use line-of-sight (LOS) to check whether an opening is visible to the player.
-3. If an opening is visible **and** the player is below the median y level of the overhang above that opening, render the underhang.
+- a 2.5D 176x300 custom surface map of the Great Plateau (uhoh)
+- accurate-ish text art physics???!
+- 9 enemy types with accurate-ish AI!
+- Master Mode and DLC chests!!!
+- 4 shrines and abilities!
+- Eight 100% accurate preloaded cutscenes!
+- Accurate ASCII UI/inventory and attack/enemy animations!
 
-This requires a separate pass to calculate opening positions ahead of time.
+All on any potatoe Python terminal, even those online ones!
 
-## Tech Stack
+Note: All world design, map layout, characters, names and specific creative content is owned by Nintendo Co., Ltd. I hope I'm not breaking any laws but honestly it won't be amazing, it will look completely different, and obviously it can't be monetized and will get no audience.
 
-- Python
-- [Amulet](https://www.amuletmc.com/) for Minecraft world data extraction
 
-## Installation
-
-_TBD_
-
-## Usage
-
-_TBD_
-
-## Roadmap
-See [TODO.txt](./TODO.txt) for the detailed task breakdown.
-- [ ] Datamining P
-- [ ] Underhang/cave extraction script
-- [ ] Cave opening detection + LOS rendering
-- [ ] Top-down ASCII renderer
-- [ ] _(more TBD)_
+## Pipeline status
+[X] **Phase 1 — datamining**: raw extraction from Minecraft world (raw_scan, symbol map, air detection, underhangs, openings). Complete. Should no longer need the Minecraft world reloaded for normal work.
+[:] **Phase 2 — data polishing**: normalization, translation key, symbol remap, opening→entrance grouping. Mostly done — only trees still in progress.
+[ ] **Phase 3 — rendering**: rendering the world. includes map data, underhangs, custom overlays, and entities. yay i finally get to touch an if statement
+[ ] **Phase 4 — the player**: Player class, HP, stamina, climbing. inventory and attack animation and hitbox. abilities, bow+shield.
+[ ] **Phase 5 — other entities**: Enemy behavior, NPCs, wild animals, fish.
+[ ] **Phase 6 — shrines and interiors**: redoing Phase 1 for scraping base data from shrines and then hand-authoring details, fixing interior of Shrine of Resurrection, Old Man's Cabin and Temple of Time.
+[ ] **Phase 7 — gameplay and content**: preloading cutscenes and adding dialogue, progression and unlocks. UI/HUD, settings, main menu, world+save states.
 
 ## Contributing
 
-_TBD_
+Unless you're @Katsugachi or myself, please, just don't. 
 
-## License
+## Resources
+https://grazzy.sae.sh is Grazzy's MC world which I stole map data from.
+https://github.com/MrCheeze/botw-tools/blob/master/heightmap.py is some random heightmap data I used early on.
 
-_TBD_# botw-ascii
+

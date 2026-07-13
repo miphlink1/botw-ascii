@@ -15,13 +15,13 @@
 
 ## Known open problems (in priority order I'm thinking about them)
 1. **custommap** — manual overlay fixes on top of `readmap` (e.g. stone path vs. stone wall being visually identical). Have a custom HTML/JS editor tool for this (`tools/map_editor.html`) — canvas-based, find/replace within a drag-selection, green diff highlighting, yellow "show all matches" highlighting, altitude overlay toggle, undo/redo, exports a sparse `custommap.json` overlay (`{"x,z": "char"}`, not a full duplicate grid).
-2. **Trees** — currently baked into `surface.json`/`underhangs.json` as if they were solid terrain/roofs. Trees have irregular trunks (curvy, embedded logs) and varied leaf types (Grazzy's flair), so simple "column scan" assumptions don't work. Current plan (no world reload needed):
+2. **trees** — currently baked into `surface.json`/`underhangs.json` as if they were solid terrain/roofs. Trees have irregular trunks (curvy, embedded logs) and varied leaf types (Grazzy's flair), so simple "column scan" assumptions don't work. Current plan (no world reload needed):
    - Flag tree-topped columns in `surface.json` via block IDs in `key.json`
    - Real ground under each tree is already sitting in `underhangs.json` as that column's artmap floor (confirmed: underhangs = air-under-roof, correctly captured tree canopies as "roofs" too) — patch it back into `surface.json`, then strip those fake entries out of `underhangs.json`
    - Cluster tree blocks into individual trees via connectivity (trunks) + nearest-trunk-by-distance (leaves), size-filter to fold stray embedded logs into the nearest real trunk
    - Nearest-to-centroid block = trunk/chop-point, rest = leaves → output `trees.json`
    - This becomes a new script, tentatively `patch_tree_columns.py`, fully self-contained (reads existing JSON only, no Amulet)
-   - **Not yet started** — flagged as risky/destructive (overwrites real pipeline output), so plan is to do it on a git branch (`tree-patch`) plus a manual `.bak` copy of the 3 files it touches, before running.
+   - **ot yet started** — flagged as risky/destructive (overwrites real pipeline output), so plan is to do it on a git branch (`tree-patch`) plus a manual `.bak` copy of the 3 files it touches, before running.
 3. Naming convention for maps must be fixed - streamline to:
    - heightmap (formerly altmap)
    - blockmap (raw surface map)
@@ -40,30 +40,69 @@
 
 ## Directory structure (after streamline above completed):
 ```
-scripts/       # pipeline steps, run in sequence
-data/          
-  raw/         # first-pass extraction output
-  runtime/     # polished/normalized output
-    keys/
-      translation_key.json
-    surface/
-      heightmap.json
-      blockmap.json
-      symbolmap.json
-      overlaymap.json (will be added after 1.)
-    underhangs/
-      underhangs_translated.json
-      underhangs.json
-test/          # test & debug scripts
-tools/         # standalone utilities (map_editor.html lives here)
-README.md
-TODO.txt
-.gitignore
-AGENTS.md      # this file
+├── AGENTS.md
+├── README.md
+├── TODO.txt
+├── data
+│   ├── raw
+│   │   ├── diagnostics
+│   │   │   ├── dropped_blocks.txt
+│   │   │   └── dropped_blocks_final.json
+│   │   ├── keys
+│   │   │   ├── block_counts_surface.json
+│   │   │   ├── block_counts_underhangs.json
+│   │   │   ├── key.json
+│   │   │   └── key_raw.json
+│   │   ├── surface
+│   │   │   ├── surface_altitude.json
+│   │   │   ├── surface_art.txt
+│   │   │   └── surface_raw.json
+│   │   └── underhangs
+│   │       ├── archive_underhangs.json
+│   │       ├── runtime_underhangs.json
+│   │       ├── runtime_underhangs_with_entrances.json
+│   │       ├── subterranean_air.json
+│   │       ├── underhangs_openings.json
+│   │       ├── underhangs_openings_ids.json
+│   │       └── underhangs_raw.json
+│   └── runtime
+│       ├── keys
+│       │   └── translation_key.json
+│       ├── surface
+│       │   ├── surface_altitude.json
+│       │   ├── surface_art.txt
+│       │   └── surface_art_translated.txt
+│       └── underhangs
+│           ├── underhangs.json
+│           └── underhangs_translated.json
+├── scripts
+│   ├── assign_underhangs_ids.py
+│   ├── build_symbol_map.py
+│   ├── build_underhangs.py
+│   ├── convert_surface_to_ascii.py
+│   ├── detect_air_columns.py
+│   ├── detect_openings.py
+│   ├── group_caves.py
+│   ├── group_openings_into_entrances.py
+│   ├── interactive_symbol_remap.py
+│   ├── normalize_surface_altitude.py
+│   ├── normalize_underhang_altmaps.py
+│   ├── raw_scan.py
+│   ├── rebuild_symbols_with_underhangs.py
+│   ├── rebuild_underhangs_ascii.py
+│   ├── split_underhangs.py
+│   └── trim_block_counts.py
+├── test
+│   ├── resolve_translation_key.py
+│   ├── runtime_underhangs_translated.json
+│   ├── surface_art_translated.txt
+│   ├── translation_key.json
+│   └── translation_key_raw.json
+└── tools
+    └── mapeditor.html
 ```
 
 ## Immediate next step
 streamline naming convention first and push to Git, then start working on trees
 
 ---
-*Last updated: [fill in date]*
