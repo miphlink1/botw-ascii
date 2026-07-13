@@ -20,7 +20,7 @@ Instead of hand-authoring the map data, this project extracts it from Grazzy's [
 
 The first layer extracted is the surface: the highest non-air block for each `[x, z]` column within the bounds of the Great Plateau. 
 
-**Note:** Surface data has been streamlined to match underhangs.json, so there is a surface_art.txt and surface_raw.json.
+**Note** Surface data has been streamlined to match underhangs.json, so there is a surface_art.txt and surface_raw.json.
 
 ### 2. Underhangs (caves, overhangs, interiors)
 

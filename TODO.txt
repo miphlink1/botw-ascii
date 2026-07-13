@@ -37,4 +37,4 @@ small convenient tasks:
     [X] python split_underhangs.py
     [X] python interactive_symbol_remap.py
     [X] python resolve_translation_key.py
-    [:] python render.py
+    [ ] python
