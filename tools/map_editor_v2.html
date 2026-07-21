@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>custommap editor</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #131a22;
+    --border: #253141;
+    --text: #c9d1d9;
+    --text-dim: #6e7c8c;
+    --accent: #4fb3d9;
+    --accent-dim: #2c6e8a;
+    --green: #3fb950;
+    --green-bg: rgba(63, 185, 80, 0.35);
+    --orange: #e08a3c;
+    --orange-bg: rgba(224, 138, 60, 0.4);
+    --yellow: #f0c814;
+    --mono: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 0 14px 0 0;
+    letter-spacing: 0.5px;
+    text-transform: lowercase;
+  }
+  .group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-left: 1px solid var(--border);
+  }
+  .group:first-of-type { border-left: none; }
+  label.filebtn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  label.filebtn:hover { border-color: var(--accent-dim); }
+  label.filebtn input { display: none; }
+  .loaded-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--border);
+    display: inline-block;
+    margin-left: -3px;
+  }
+  .loaded-dot.ok { background: var(--green); }
+  input[type=text] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 4px;
+    width: 42px;
+    text-align: center;
+    font-family: var(--mono);
+  }
+  input[type=text]:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  input#commonTiles {
+    width: 150px;
+    text-align: left;
+  }
+  button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent-dim); color: var(--accent); }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button.primary {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+    color: #fff;
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #05161c; }
+  .toggle {
+    display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim);
+  }
+  .toggle.active { color: var(--accent); }
+  main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  #scrollwrap {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: #cfcabb;
+  }
+  #spacer {
+    position: relative;
+  }
+  canvas {
+    display: block;
+    position: sticky;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+  }
+  #placeholder {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-dim);
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.8;
+    pointer-events: none;
+  }
+  aside {
+    width: 230px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 14px;
+    overflow-y: auto;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  aside h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    margin: 0 0 8px 0;
+  }
+  .stat-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--text-dim); }
+  .stat-row b { color: var(--text); font-weight: 500; }
+  .legend { margin-top: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+  footer {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 6px 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+  #status { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>custommap editor</h1>
+
+  <div class="group">
+    <label class="filebtn">load readmap.txt<input type="file" id="readmapInput" accept=".txt"></label>
+    <span class="loaded-dot" id="dotReadmap"></span>
+    <label class="filebtn">load altmap.json<input type="file" id="altmapInput" accept=".json"></label>
+    <span class="loaded-dot" id="dotAltmap"></span>
+  </div>
+
+  <div class="group">
+    <span style="color:var(--text-dim)">find</span>
+    <input type="text" id="findChar" maxlength="1">
+    <span style="color:var(--text-dim)">replace</span>
+    <input type="text" id="replaceChar" maxlength="1">
+    <button class="primary" id="applyBtn" disabled>apply to selection</button>
+  </div>
+
+  <div class="group">
+    <button id="undoBtn" disabled>&#8630; undo</button>
+    <button id="redoBtn" disabled>&#8631; redo</button>
+    <button id="clearSelBtn" disabled>clear selection</button>
+  </div>
+
+  <div class="group">
+    <div class="toggle" id="altToggleWrap">
+      <input type="checkbox" id="altToggle" disabled>
+      <label for="altToggle">altitude overlay</label>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="toggle" id="rareToggleWrap">
+      <input type="checkbox" id="rareToggle" disabled>
+      <label for="rareToggle">highlight non-common</label>
+    </div>
+    <input type="text" id="commonTiles" placeholder="e.g. ,.#~^v" title="every character listed here is treated as 'common' and left unhighlighted">
+  </div>
+
+  <div class="group" style="margin-left:auto; border-left:none;">
+    <button id="exportBtn" class="primary" disabled>export custommap.json</button>
+  </div>
+</header>
+
+<main>
+  <div id="scrollwrap">
+    <div id="spacer">
+      <canvas id="grid"></canvas>
+    </div>
+    <div id="placeholder">load readmap.txt and surface_altitude.json to begin<br>&#8203;<br>drag to select an area &middot; click one tile then type a character to edit it directly</div>
+  </div>
+
+  <aside>
+    <h2>selection</h2>
+    <div class="stat-row"><span>bounds</span><b id="statBounds">&mdash;</b></div>
+    <div class="stat-row"><span>cells</span><b id="statCells">&mdash;</b></div>
+    <div class="stat-row" id="singleEditHint" style="display:none; color:var(--accent);"><span>type to edit this tile</span></div>
+
+    <h2 style="margin-top:16px">map</h2>
+    <div class="stat-row"><span>dimensions</span><b id="statDims">&mdash;</b></div>
+    <div class="stat-row"><span>edits made</span><b id="statEdits">0</b></div>
+    <div class="stat-row"><span>zoom</span><b id="statZoom">10px</b></div>
+
+    <div class="legend" id="charLegend">
+      <h2>hovered cell</h2>
+      <div class="stat-row"><span>char</span><b id="hoverChar">&mdash;</b></div>
+      <div class="stat-row"><span>x, z</span><b id="hoverXZ">&mdash;</b></div>
+      <div class="stat-row"><span>altitude</span><b id="hoverAlt">&mdash;</b></div>
+    </div>
+
+    <div class="legend">
+      <h2>legend</h2>
+      <div class="legend-item"><div class="swatch" style="background:var(--green-bg); border:1px solid var(--green)"></div><span>edited cell</span></div>
+      <div class="legend-item"><div class="swatch" style="background:rgba(47,120,150,0.25); border:1px solid var(--accent)"></div><span>current selection</span></div>
+      <div class="legend-item"><div class="swatch" style="background:rgba(240,200,20,0.55); border:1px solid var(--yellow)"></div><span>find matches</span></div>
+      <div class="legend-item"><div class="swatch" style="background:var(--orange-bg); border:1px solid var(--orange)"></div><span>non-common tile</span></div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span id="status">no map loaded</span>
+  <span>scroll to pan &middot; wheel+ctrl / pinch to zoom &middot; drag to select</span>
+</footer>
+
+<script>
+(function() {
+  // ---------- state ----------
+  let readmap = null;      // original, immutable: array of arrays of chars
+  let altmap = null;       // array of arrays of numbers
+  let working = null;      // array of arrays of chars, mutable (the "custommap" in progress)
+  let rows = 0, cols = 0;
+  let cellSize = 14;
+  let minAlt = 0, maxAlt = 0;
+
+  let selection = null;    // {x0,z0,x1,z1} normalized so x0<=x1, z0<=z1
+  let isDragging = false;
+  let dragStart = null;
+
+  let undoStack = [];      // arrays of {x,z,from,to}
+  let redoStack = [];
+  let editCount = 0;
+
+  let showAltitude = false;
+  let highlightChar = '';
+
+  let rareHighlightOn = false;
+  let commonSet = new Set();
+
+  // viewport virtualization: only cells actually on screen get drawn
+  let viewCols = 0, viewRows = 0; // how many cells fit in the visible canvas
+  let pendingFrame = false;
+
+  const canvas = document.getElementById('grid');
+  const ctx = canvas.getContext('2d');
+  const scrollwrap = document.getElementById('scrollwrap');
+  const spacer = document.getElementById('spacer');
+  const placeholder = document.getElementById('placeholder');
+
+  const dotReadmap = document.getElementById('dotReadmap');
+  const dotAltmap = document.getElementById('dotAltmap');
+  const applyBtn = document.getElementById('applyBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const clearSelBtn = document.getElementById('clearSelBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const altToggle = document.getElementById('altToggle');
+  const rareToggle = document.getElementById('rareToggle');
+  const commonTilesInput = document.getElementById('commonTiles');
+  const status = document.getElementById('status');
+
+  const statBounds = document.getElementById('statBounds');
+  const statCells = document.getElementById('statCells');
+  const statDims = document.getElementById('statDims');
+  const statEdits = document.getElementById('statEdits');
+  const statZoom = document.getElementById('statZoom');
+  const hoverChar = document.getElementById('hoverChar');
+  const hoverXZ = document.getElementById('hoverXZ');
+  const hoverAlt = document.getElementById('hoverAlt');
+  const singleEditHint = document.getElementById('singleEditHint');
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  // ---------- loading ----------
+  document.getElementById('readmapInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const text = ev.target.result.replace(/\r/g, '');
+      const lines = text.split('\n').filter(l => l.length > 0);
+      readmap = lines.map(l => l.split(''));
+      working = readmap.map(row => row.slice());
+      rows = readmap.length;
+      cols = Math.max(...readmap.map(r => r.length));
+      dotReadmap.classList.add('ok');
+      setStatus('readmap loaded: ' + rows + ' rows x ' + cols + ' cols');
+      tryInit();
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('altmapInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        altmap = JSON.parse(ev.target.result);
+        let mn = Infinity, mx = -Infinity;
+        for (const row of altmap) for (const v of row) { if (v < mn) mn = v; if (v > mx) mx = v; }
+        minAlt = mn; maxAlt = mx;
+        dotAltmap.classList.add('ok');
+        setStatus('altmap loaded: ' + altmap.length + ' rows, altitude range ' + mn + ' to ' + mx);
+        altToggle.disabled = false;
+        tryInit();
+      } catch (err) {
+        setStatus('error parsing altmap.json: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  function tryInit() {
+    if (!readmap) return;
+    placeholder.style.display = 'none';
+    statDims.textContent = rows + ' x ' + cols;
+    rareToggle.disabled = false;
+    layoutCanvas();
+    requestRender();
+    exportBtn.disabled = false;
+  }
+
+  // ---------- viewport-virtualized canvas sizing ----------
+  // The canvas itself is only ever as big as the visible viewport (fast to draw,
+  // fast to composite). A separate invisible "spacer" div is sized to the FULL
+  // logical map, which is what actually drives the scrollbars. The canvas is
+  // pinned to the top-left corner of the viewport via `position: sticky`, and on
+  // every scroll we redraw only the handful of cells currently on screen.
+  function layoutCanvas() {
+    if (!working) return;
+    spacer.style.width = (cols * cellSize) + 'px';
+    spacer.style.height = (rows * cellSize) + 'px';
+    const vw = scrollwrap.clientWidth;
+    const vh = scrollwrap.clientHeight;
+    canvas.width = vw;
+    canvas.height = vh;
+    canvas.style.width = vw + 'px';
+    canvas.style.height = vh + 'px';
+    viewCols = Math.ceil(vw / cellSize) + 2;
+    viewRows = Math.ceil(vh / cellSize) + 2;
+    statZoom.textContent = cellSize + 'px';
+  }
+
+  function requestRender() {
+    if (pendingFrame) return;
+    pendingFrame = true;
+    requestAnimationFrame(function() {
+      pendingFrame = false;
+      render();
+    });
+  }
+
+  scrollwrap.addEventListener('scroll', requestRender);
+  window.addEventListener('resize', function() {
+    layoutCanvas();
+    requestRender();
+  });
+
+  // ---------- rendering ----------
+  function altColor(v) {
+    if (maxAlt === minAlt) return 'rgb(80,80,80)';
+    const t = (v - minAlt) / (maxAlt - minAlt);
+    const stops = [
+      [40, 60, 130],
+      [40, 140, 150],
+      [90, 180, 110],
+      [210, 190, 100],
+      [200, 120, 80]
+    ];
+    const scaled = t * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(scaled));
+    const f = scaled - i;
+    const a = stops[i], b = stops[i + 1];
+    const r = Math.round(a[0] + (b[0] - a[0]) * f);
+    const g = Math.round(a[1] + (b[1] - a[1]) * f);
+    const bl = Math.round(a[2] + (b[2] - a[2]) * f);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+
+  function render() {
+    if (!working) return;
+    ctx.fillStyle = '#eae6da';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const scrollLeft = scrollwrap.scrollLeft;
+    const scrollTop = scrollwrap.scrollTop;
+
+    const startX = Math.max(0, Math.floor(scrollLeft / cellSize) - 1);
+    const startZ = Math.max(0, Math.floor(scrollTop / cellSize) - 1);
+    const endX = Math.min(cols - 1, startX + viewCols);
+    const endZ = Math.min(rows - 1, startZ + viewRows);
+
+    const fontSize = Math.max(6, Math.floor(cellSize * 0.98));
+    ctx.font = '700 ' + fontSize + 'px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let z = startZ; z <= endZ; z++) {
+      const row = working[z];
+      const origRow = readmap[z];
+      if (!row) continue;
+      for (let x = startX; x <= endX; x++) {
+        const ch = row[x] || ' ';
+        const px = x * cellSize - scrollLeft;
+        const py = z * cellSize - scrollTop;
+        const isEdited = origRow[x] !== undefined && ch !== origRow[x];
+        const inSelection = selection &&
+          x >= selection.x0 && x <= selection.x1 &&
+          z >= selection.z0 && z <= selection.z1;
+        const isMatch = highlightChar && ch === highlightChar &&
+          (!selection || (x >= selection.x0 && x <= selection.x1 && z >= selection.z0 && z <= selection.z1));
+        const isRare = rareHighlightOn && ch !== ' ' && !commonSet.has(ch);
+
+        if (showAltitude && altmap && altmap[z] && altmap[z][x] !== undefined) {
+          ctx.fillStyle = altColor(altmap[z][x]);
+          ctx.fillRect(px, py, cellSize, cellSize);
+        } else {
+          if (isEdited) {
+            ctx.fillStyle = 'rgba(34,140,60,0.28)';
+            ctx.fillRect(px, py, cellSize, cellSize);
+          }
+          if (isRare) {
+            ctx.fillStyle = 'rgba(224,138,60,0.5)';
+            ctx.fillRect(px, py, cellSize, cellSize);
+          }
+          if (isMatch) {
+            ctx.fillStyle = 'rgba(240,200,20,0.55)';
+            ctx.fillRect(px, py, cellSize, cellSize);
+          }
+          ctx.fillStyle = isEdited ? '#1a7a34' : '#22282f';
+          if (cellSize >= 5) {
+            ctx.fillText(ch, px + cellSize / 2, py + cellSize / 2 + fontSize * 0.04);
+          }
+        }
+
+        if (inSelection) {
+          ctx.fillStyle = 'rgba(47,120,150,0.22)';
+          ctx.fillRect(px, py, cellSize, cellSize);
+          ctx.strokeStyle = 'rgba(47,120,150,0.7)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 0.5, py + 0.5, cellSize - 1, cellSize - 1);
+        }
+        if (isMatch) {
+          ctx.strokeStyle = 'rgba(240,200,20,0.9)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 0.5, py + 0.5, cellSize - 1, cellSize - 1);
+        }
+      }
+    }
+    updateSelectionStats();
+  }
+
+  // ---------- selection ----------
+  function cellFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left + scrollwrap.scrollLeft) / cellSize);
+    const z = Math.floor((e.clientY - rect.top + scrollwrap.scrollTop) / cellSize);
+    return {
+      x: Math.max(0, Math.min(cols - 1, x)),
+      z: Math.max(0, Math.min(rows - 1, z))
+    };
+  }
+
+  canvas.addEventListener('mousedown', function(e) {
+    if (!working) return;
+    isDragging = true;
+    dragStart = cellFromEvent(e);
+    selection = { x0: dragStart.x, z0: dragStart.z, x1: dragStart.x, z1: dragStart.z };
+    requestRender();
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!working) return;
+    const c = cellFromEvent(e);
+    if (isDragging && dragStart) {
+      selection = {
+        x0: Math.min(dragStart.x, c.x), x1: Math.max(dragStart.x, c.x),
+        z0: Math.min(dragStart.z, c.z), z1: Math.max(dragStart.z, c.z)
+      };
+      requestRender();
+    }
+    const rect = canvas.getBoundingClientRect();
+    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      hoverChar.textContent = (working[c.z] && working[c.z][c.x]) || '\u2014';
+      hoverXZ.textContent = c.x + ', ' + c.z;
+      hoverAlt.textContent = (altmap && altmap[c.z] && altmap[c.z][c.x] !== undefined) ? altmap[c.z][c.x] : '\u2014';
+    }
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (isDragging) {
+      isDragging = false;
+      applyBtn.disabled = !selection;
+      clearSelBtn.disabled = !selection;
+    }
+  });
+
+  function isSingleCellSelected() {
+    return selection && selection.x0 === selection.x1 && selection.z0 === selection.z1;
+  }
+
+  function updateSelectionStats() {
+    if (!selection) {
+      statBounds.textContent = '\u2014';
+      statCells.textContent = '\u2014';
+      singleEditHint.style.display = 'none';
+      return;
+    }
+    const w = selection.x1 - selection.x0 + 1;
+    const h = selection.z1 - selection.z0 + 1;
+    statBounds.textContent = '(' + selection.x0 + ',' + selection.z0 + ') \u2192 (' + selection.x1 + ',' + selection.z1 + ')';
+    statCells.textContent = (w * h).toLocaleString();
+    singleEditHint.style.display = isSingleCellSelected() ? 'flex' : 'none';
+  }
+
+  document.getElementById('clearSelBtn').addEventListener('click', function() {
+    selection = null;
+    applyBtn.disabled = true;
+    clearSelBtn.disabled = true;
+    requestRender();
+  });
+
+  // ---------- zoom ----------
+  scrollwrap.addEventListener('wheel', function(e) {
+    if (!working) return;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const old = cellSize;
+      cellSize = Math.max(3, Math.min(40, cellSize - Math.sign(e.deltaY) * 1));
+      if (cellSize !== old) {
+        layoutCanvas();
+        requestRender();
+      }
+    }
+  }, { passive: false });
+
+  // ---------- find & replace ----------
+  const findInput = document.getElementById('findChar');
+  const replaceInput = document.getElementById('replaceChar');
+
+  function updateHighlight() {
+    const findVal = findInput.value;
+    const replaceVal = replaceInput.value;
+    highlightChar = (findVal && !replaceVal) ? findVal : '';
+    requestRender();
+  }
+  findInput.addEventListener('input', updateHighlight);
+  replaceInput.addEventListener('input', updateHighlight);
+
+  function applyOps(ops) {
+    if (ops.length === 0) return;
+    ops.forEach(op => { working[op.z][op.x] = op.to; });
+    undoStack.push(ops);
+    redoStack = [];
+    editCount += ops.length;
+    statEdits.textContent = editCount;
+    undoBtn.disabled = false;
+    redoBtn.disabled = true;
+  }
+
+  applyBtn.addEventListener('click', function() {
+    if (!selection || !working) return;
+    const findVal = findInput.value;
+    const replaceVal = replaceInput.value;
+    if (!replaceVal) { setStatus('enter a replacement character'); return; }
+
+    const ops = [];
+    for (let z = selection.z0; z <= selection.z1; z++) {
+      for (let x = selection.x0; x <= selection.x1; x++) {
+        const current = working[z][x];
+        if (findVal && current !== findVal) continue;
+        if (current === replaceVal) continue;
+        ops.push({ x, z, from: current, to: replaceVal });
+      }
+    }
+    if (ops.length === 0) { setStatus('no matching cells in selection'); return; }
+    applyOps(ops);
+    setStatus('replaced ' + ops.length + ' cell' + (ops.length === 1 ? '' : 's'));
+    requestRender();
+  });
+
+  undoBtn.addEventListener('click', function() {
+    const ops = undoStack.pop();
+    if (!ops) return;
+    ops.forEach(op => { working[op.z][op.x] = op.from; });
+    redoStack.push(ops);
+    editCount -= ops.length;
+    statEdits.textContent = editCount;
+    undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = false;
+    setStatus('undid ' + ops.length + ' edit' + (ops.length === 1 ? '' : 's'));
+    requestRender();
+  });
+
+  redoBtn.addEventListener('click', function() {
+    const ops = redoStack.pop();
+    if (!ops) return;
+    ops.forEach(op => { working[op.z][op.x] = op.to; });
+    undoStack.push(ops);
+    editCount += ops.length;
+    statEdits.textContent = editCount;
+    redoBtn.disabled = redoStack.length === 0;
+    undoBtn.disabled = false;
+    setStatus('redid ' + ops.length + ' edit' + (ops.length === 1 ? '' : 's'));
+    requestRender();
+  });
+
+  // ---------- single-tile keyboard editing ----------
+  // when exactly one cell is selected, typing any single printable character
+  // overwrites that tile directly -- no need to go through find/replace for
+  // one-off fixes.
+  window.addEventListener('keydown', function(e) {
+    const active = document.activeElement;
+    const typingInField = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) { redoBtn.click(); } else { undoBtn.click(); }
+      return;
+    }
+
+    if (typingInField || !working) return;
+    if (!isSingleCellSelected()) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length !== 1) return; // ignore Shift, Enter, arrows, etc.
+
+    e.preventDefault();
+    const x = selection.x0, z = selection.z0;
+    const from = working[z][x];
+    const to = e.key;
+    if (from === to) return;
+    applyOps([{ x, z, from, to }]);
+    setStatus('set (' + x + ', ' + z + ') to "' + to + '"');
+    requestRender();
+  });
+
+  // ---------- altitude toggle ----------
+  altToggle.addEventListener('change', function() {
+    showAltitude = altToggle.checked;
+    document.getElementById('altToggleWrap').classList.toggle('active', showAltitude);
+    requestRender();
+  });
+
+  // ---------- non-common tile highlight ----------
+  function updateCommonSet() {
+    commonSet = new Set(commonTilesInput.value.split('').filter(c => c !== ' '));
+  }
+  rareToggle.addEventListener('change', function() {
+    rareHighlightOn = rareToggle.checked;
+    document.getElementById('rareToggleWrap').classList.toggle('active', rareHighlightOn);
+    requestRender();
+  });
+  commonTilesInput.addEventListener('input', function() {
+    updateCommonSet();
+    if (rareHighlightOn) requestRender();
+  });
+
+  // ---------- export ----------
+  exportBtn.addEventListener('click', function() {
+    const diff = {};
+    for (let z = 0; z < rows; z++) {
+      for (let x = 0; x < cols; x++) {
+        const orig = readmap[z][x];
+        const cur = working[z][x];
+        if (orig !== cur) {
+          diff[x + ',' + z] = cur;
+        }
+      }
+    }
+    const payload = {
+      _meta: {
+        source: 'custommap editor',
+        dimensions: { rows, cols },
+        edit_count: Object.keys(diff).length,
+        generated: new Date().toISOString()
+      },
+      overrides: diff
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'custommap.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('exported custommap.json (' + Object.keys(diff).length + ' overrides)');
+  });
+})();
+</script>
+</body>
+</html>
